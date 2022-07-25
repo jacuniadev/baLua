@@ -148,7 +148,7 @@ function arrowFunctions(code)
 
     -- replace for(var in array) { body } with for var in pairs(array) do body end
     code = code:gsub("for%s*%((%w+)%s+of%s+(%w+)%) ?{ ?(.-) ?}", function(variable, array, body)
-        return "for " .. variable .. " in pairs(" .. array .. ") do " .. body .. " end"
+        return "for _," .. variable .. " in pairs(" .. array .. ") do " .. body .. " end"
     end)
 
     -- replace all for(variable in array) with for variable in ipairs(array)
@@ -158,6 +158,9 @@ function arrowFunctions(code)
 
     -- replace all for(key, value in array) with for key, value in pairs(array)
     code = code:gsub("for%s*%((%w+)%s*,%s*(%w+)%s*of%s*(%w+)%) ?{ ?(.-) ?}", function(key, value, array, body)
+        return "for " .. key .. ", " .. value .. " in pairs(" .. array .. ") do " .. body .. " end"
+    end)
+    code = code:gsub("for%s*%((%w+)%s*,%s*(%w+)%s*in%s*(%w+)%) ?{ ?(.-) ?}", function(key, value, array, body)
         return "for " .. key .. ", " .. value .. " in pairs(" .. array .. ") do " .. body .. " end"
     end)
 
@@ -200,13 +203,23 @@ function arrowFunctions(code)
 
     -- replace all [number or string} with [number or string]
     code = code:gsub("%[(%w+)%}", "[%1]")
-    code = code:gsub("%[(%d+)%]", function(a)
-        return "[" .. a+1 .. "]"
-    end)
+    -- code = code:gsub("%[(%d+)%]", function(a)
+    --     return "[" .. a+1 .. "]"
+    -- end)
 
     -- code = code:gsub("for%(%w* ?= ? %d+; ?%w* ?< ?%d+; ?%w*++%) ?{ ?(.-) ?}", function(match)
     --     print(match)
     -- end)
+
+    return code
+end
+
+function tryFunctions(code)
+    -- replace all try { body } catch { body } with pcall(function() body end)
+    code = code:gsub("try ?{ ?(.-) ?} ?catch ?{ ?(.-) ?}", "if not pcall(function() %1 end) then %2 end")
+
+    -- replace all try { body } catch(error) { body } with pcall(function() body end)
+    code = code:gsub("try ?{ ?(.-) ?} ?catch%((.-)%) ?{ ?(.-) ?}", "local __pres = pcall(function() %1 end); if not __pres then (function(%2) %3 end)(__pres) end")
 
     return code
 end
@@ -216,7 +229,19 @@ function parse(code)
     code = constOperator(code)
     code = arrowFunctions(code)
     code = quickOperators(code)
+    code = tryFunctions(code)
 
-    local v = loadstring(code)
-    v()
+    print(code)
+
+    -- local v = loadstring(code)
+    -- assert(v, "Error")
+    -- v()
 end
+
+parse([[
+try {
+    gowno()
+} catch(e) {
+    print(e)
+}
+]])
