@@ -231,17 +231,7 @@ function parse(code)
     code = quickOperators(code)
     code = tryFunctions(code)
 
-    print(code)
-
-    -- local v = loadstring(code)
-    -- assert(v, "Error")
-    -- v()
+    local v = loadstring(code)
+    assert(v, "Error")
+    v()
 end
-
-parse([[
-try {
-    gowno()
-} catch(e) {
-    print(e)
-}
-]])
